@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>NSS Cyber Safety Demo – UPI Simulation</title>
+  <style>
+    /* ─── Reset & Base ───────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --purple:       #5f259f;
+      --purple-d:     #4a1a7a;
+      --purple-light: #f3e8ff;
+      --phonepe-dark: #141414;
+      --phonepe-card: #1e1e1e;
+      --phonepe-card-hover: #262626;
+      --phonepe-divider: #2a2a2a;
+      --phonepe-subtext: #9e9e9e;
+      --phonepe-white:   #ffffff;
+      --phonepe-green:   #2b6a3b;
+      --phonepe-green-light: #80c793;
+      --phonepe-action:  #4a2574;
+      --red:             #dc2626;
+      --red-dark:        #991b1b;
+      --radius:          16px;
+      --radius-sm:       10px;
+      --font-stack:      system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    }
+    html, body {
+      height: 100%;
+      font-family: var(--font-stack);
+      background: #000;
+      color: #fff;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      font-variant-numeric: tabular-nums;
+    }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      background: #0a0a0a;
+      min-height: 100dvh;
+    }
+
+    /* ─── Mobile Viewport Frame ─────────────────────────── */
+    .app-viewport {
+      width: 100%;
+      max-width: 430px;
+      min-height: 100dvh;
+      background: #141414;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 40px rgba(0,0,0,0.8);
+      overflow-x: hidden;
+    }
+
+    /* ─── Screen Container ───────────────────────────────── */
+    .screen {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      width: 100%;
+      position: relative;
+      background: inherit;
+    }
+    .screen.active {
+      display: flex;
+    }
+
+    /* ─── Safe Watermark / Awareness Badge ───────────────── */
+    .nss-simulation-pill {
+      position: fixed;
+      bottom: 64px;
+      right: 12px;
+      z-index: 9999;
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #fbbf24;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+    .nss-simulation-pill::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #fbbf24;
+      animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SCREEN 1: SETUP SCREEN
+    ══════════════════════════════════════════════════════ */
+    #setup {
+      background: #ffffff;
+      color: #1f2937;
+    }
+    .setup-top {
+      background: var(--purple);
+      padding: 36px 20px 28px;
+      color: #ffffff;
+      position: relative;
+    }
+    .setup-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .setup-top h1 {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+    .setup-top p {
+      font-size: 13px;
+      opacity: 0.85;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+    .setup-content {
+      padding: 24px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .form-label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #4b5563;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 15px;
+      background: #f9fafb;
+      color: #111827;
+      transition: all 0.2s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--purple);
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(95,37,159,0.12);
+    }
+    .amount-input-box {
+      position: relative;
+    }
+    .amount-input-box .sym {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--purple);
+    }
+    .amount-input-box input {
+      padding-left: 34px !important;
+      font-size: 18px !important;
+      font-weight: 700;
+    }
+    .quick-history-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #f3f4f6;
+      border: 1.5px solid #e5e7eb;
+      color: #4b5563;
+      padding: 12px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .quick-history-btn:active {
+      background: #e5e7eb;
+    }
+    .start-btn {
+      background: linear-gradient(135deg, var(--purple) 0%, #7c3aed 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 18px rgba(95,37,159,0.35);
+      transition: transform 0.15s;
+    }
+    .start-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SCREEN 2: PROCESSING (PhonePe Purple Loader)
+    ══════════════════════════════════════════════════════ */
+    #processing {
+      background: var(--purple);
+      color: #ffffff;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 24px;
+      text-align: center;
+    }
+    .proc-spinner {
+      width: 68px;
+      height: 68px;
+      border: 5px solid rgba(255,255,255,0.25);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .proc-amount {
+      font-size: 34px;
+      font-weight: 800;
+    }
+    .proc-shop {
+      font-size: 15px;
+      opacity: 0.85;
+      margin-top: 4px;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SCREEN 3: REALISTIC TRANSACTION SUCCESSFUL (Dark PhonePe)
+       Grounded exactly in Screenshot 2
+    ══════════════════════════════════════════════════════ */
+    #receipt {
+      background: var(--phonepe-dark);
+      color: #ffffff;
+      padding-bottom: 30px;
+    }
+    /* Top Header Bar */
+    .receipt-header {
+      background: var(--phonepe-green);
+      padding: 14px 16px 14px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .receipt-header.fake-mode {
+      background: var(--red) !important;
+    }
+    .receipt-back-btn {
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .receipt-header-titles {
+      flex: 1;
+    }
+    .receipt-header-title {
+      font-size: 16.5px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.2px;
+    }
+    .receipt-header-sub {
+      font-size: 12px;
+      color: rgba(255,255,255,0.85);
+      margin-top: 2px;
+      font-weight: 400;
+    }
+
+    /* Reveal Awareness Banner */
+    .receipt-awareness-banner {
+      background: var(--red);
+      padding: 16px;
+      color: #ffffff;
+      display: none;
+      animation: slideDown 0.3s ease forwards;
+      border-bottom: 1px solid rgba(0,0,0,0.2);
+    }
+    .receipt-awareness-banner.active {
+      display: block;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .rab-title {
+      font-size: 14px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .rab-desc {
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 600;
+    }
+    .rab-hindi {
+      font-size: 12px;
+      opacity: 0.95;
+      margin-top: 6px;
+      line-height: 1.4;
+      font-style: italic;
+    }
+
+    /* Main Container for Cards */
+    .receipt-body {
+      padding: 12px 14px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Unified Dark Elevated Card */
+    .dark-card {
+      background: var(--phonepe-card);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid var(--phonepe-divider);
+    }
+
+    /* "Paid to" Recipient Block */
+    .paid-to-label {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 14px;
+    }
+    .recipient-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .recipient-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+    .recipient-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #4ea8de;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .recipient-meta {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .recipient-name {
+      font-size: 15.5px;
+      font-weight: 600;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .recipient-upi {
+      font-size: 12.5px;
+      color: var(--phonepe-subtext);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .recipient-amount {
+      font-size: 21px;
+      font-weight: 800;
+      color: #ffffff;
+      white-space: nowrap;
+    }
+
+    /* Details Divider */
+    .card-divider {
+      height: 1px;
+      background: var(--phonepe-divider);
+      margin: 16px 0 14px;
+    }
+
+    /* Collapsible Transfer Details Header */
+    .transfer-details-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+    .td-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .td-chevron {
+      color: #ffffff;
+      font-size: 16px;
+      transition: transform 0.25s;
+    }
+    .td-chevron.collapsed {
+      transform: rotate(180deg);
+    }
+
+    /* Transfer Details Expanded Body */
+    .transfer-details-content {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .transfer-details-content.hidden {
+      display: none;
+    }
+    .td-row-label {
+      font-size: 12px;
+      color: var(--phonepe-subtext);
+      margin-bottom: 4px;
+    }
+    .td-row-val {
+      font-size: 13.5px;
+      color: #ffffff;
+      font-weight: 500;
+    }
+    .copyable-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .copy-icon-btn {
+      background: transparent;
+      border: none;
+      color: #a78bfa;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s;
+    }
+    .copy-icon-btn:active {
+      color: #ffffff;
+    }
+    .debited-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .debited-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .bank-badge {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #f97316;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 11px;
+    }
+    .bank-acc {
+      font-size: 14px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+    }
+    .debited-amount {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .utr-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-left: 36px;
+      margin-top: 4px;
+    }
+    .utr-text {
+      font-size: 12px;
+      color: var(--phonepe-subtext);
+    }
+
+    /* Quick Action 3-Column Buttons */
+    .quick-actions-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 8px 0 2px;
+    }
+    .action-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .action-circle-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: var(--phonepe-action);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(74,37,116,0.4);
+      transition: transform 0.15s, background 0.15s;
+    }
+    .action-col:active .action-circle-btn {
+      transform: scale(0.92);
+      background: #5c2d91;
+    }
+    .action-label {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: #ffffff;
+      text-align: center;
+    }
+
+    /* Support Card */
+    .support-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      cursor: pointer;
+    }
+    .support-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    /* Promo / Security Card */
+    .promo-card {
+      position: relative;
+      overflow: hidden;
+      padding: 16px;
+    }
+    .promo-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+    .promo-sub {
+      font-size: 12px;
+      color: var(--phonepe-subtext);
+      line-height: 1.4;
+      max-width: 250px;
+      margin-bottom: 14px;
+    }
+    .promo-pill-btn {
+      background: var(--purple);
+      color: #ffffff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-block;
+    }
+    .promo-shield-wrap {
+      position: absolute;
+      right: 14px;
+      bottom: 12px;
+      width: 68px;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SCREEN 4: TRANSACTION HISTORY
+       Grounded exactly in Screenshot 1
+    ══════════════════════════════════════════════════════ */
+    #history {
+      background: #f4f5f8;
+      color: #1f2937;
+      padding-bottom: 70px;
+    }
+    /* Top Purple Header Bar */
+    .history-header {
+      background: var(--purple);
+      padding: 14px 16px 16px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .history-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-avatar-badge {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: #fde047;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .flag-corner {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .location-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .loc-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .loc-sub {
+      font-size: 11px;
+      opacity: 0.85;
+    }
+    .history-header-icons {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 18px;
+    }
+    .h-icon-btn {
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Search Bar & Filter Container */
+    .history-controls {
+      background: var(--purple);
+      padding: 0 16px 14px;
+    }
+    .search-bar-wrap {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .search-input {
+      border: none;
+      outline: none;
+      width: 100%;
+      font-size: 13px;
+      color: #1f2937;
+    }
+    .search-input::placeholder {
+      color: #9ca3af;
+    }
+
+    /* Filter Pills Row */
+    .filter-pills-row {
+      padding: 12px 16px 6px;
+      display: flex;
+      gap: 8px;
+      background: #ffffff;
+      border-bottom: 1px solid #f0f0f0;
+      overflow-x: auto;
+    }
+    .filter-pill {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      color: #374151;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .filter-pill.active {
+      background: var(--purple-light);
+      border-color: var(--purple);
+      color: var(--purple);
+    }
+
+    /* Transaction Feed List */
+    .history-feed {
+      background: #ffffff;
+      flex: 1;
+    }
+    .feed-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid #f3f4f6;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .feed-item:active {
+      background: #f9fafb;
+    }
+    .feed-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+    .feed-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .feed-badge.purple-send {
+      background: var(--purple);
+    }
+    .feed-badge.purple-receive {
+      background: #7c3aed;
+    }
+    .feed-badge.mobile {
+      background: #ffffff;
+      border: 1.5px solid #7c3aed;
+      color: #7c3aed;
+    }
+    .feed-badge.avatar {
+      border-radius: 50%;
+      background: #111;
+      overflow: hidden;
+    }
+    .feed-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .feed-action {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    .feed-name {
+      font-size: 12px;
+      color: #4b5563;
+      margin-top: 1px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .feed-time {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 2px;
+    }
+    .feed-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+    .feed-amount {
+      font-size: 15px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .feed-status-meta {
+      font-size: 11px;
+      color: #6b7280;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 2px;
+    }
+    .feed-bank-icon {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      background: #991b1b;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    /* Floating Arrow Button */
+    .history-fab {
+      position: fixed;
+      bottom: 74px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #9d81ba;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+      cursor: pointer;
+      z-index: 99;
+    }
+
+    /* Bottom 5-Tab Navigation Bar */
+    .bottom-navbar {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 430px;
+      background: #ffffff;
+      border-top: 1px solid #e5e7eb;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      padding: 8px 0 10px;
+      z-index: 100;
+    }
+    .nav-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      color: #6b7280;
+      font-size: 10.5px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .nav-tab.active {
+      color: var(--purple);
+      font-weight: 700;
+    }
+    .nav-tab svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* ─── Toast Feedback ─────────────────────────────────── */
+    .toast-popup {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(30, 30, 30, 0.95);
+      color: #ffffff;
+      border: 1px solid #333333;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 12.5px;
+      font-weight: 600;
+      z-index: 99999;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+    }
+    .toast-popup.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-6px);
+    }
+
+    /* Utility */
+    .safe-touch {
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-viewport">
+
+  <!-- Embedded Audio Player -->
+  <audio id="builtinChime" src="data:audio/mpeg;base64,SUQzBAAAAAABAFRYWFgAAAASAAADbWFqb3JfYnJhbmQAZGFzaABUWFhYAAAAEQAAA21pbm9yX3ZlcnNpb24AMABUWFhYAAAAHAAAA2NvbXBhdGlibGVfYnJhbmRzAGlzbzZtcDQxAFRTU0UAAAAPAAADTGF2ZjU4LjQ1LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAuAAAmXgAKChAQFRUbGyAgJiYmKysxMTY2OztBQUZGRkxMUVFXV1xcYmJnZ2dsbHJyd3d9fYKCiIiIjY2Tk5iYnZ2jo6OoqK6us7O5ub6+xMTEycnOztTU2dnf3+Tk5Orq7+/19fr6//8AAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAA3vKIAAAAAAAAJl6sKxtdAAAAAAAAAAAAAAAAAAAAAP/7UmRWD/AAAGkAAAAIAAANIAAAAQAAAaQAAAAgAAA0gAAABFVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tSZKkP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+1JkqQ/wAABpAAAACAAADSAAAAEAAAGkAAAAIAAANIAAAARVVVVVVVUDyjBhFKJgZzhwMWd/oQjfCIifoiIifp7li4u8u7u5b3L36IKGPCJX6PwnvoDcPxc+0IQsGgLA8FERE0T3e/////RBQUFEPFxcXFz3HgAA4P/99BBmamJ//JYYwIGy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" preload="auto" style="display:none"></audio>
+
+  <!-- Non-intrusive NSS Simulation Watermark -->
+  <div class="nss-simulation-pill">
+    <span>NSS Cyber Awareness Demo</span>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast-popup">Copied to clipboard</div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SCREEN 1: SETUP SCREEN
+  ══════════════════════════════════════════════════════ -->
+  <section id="setup" class="screen active">
+    <div class="setup-top">
+      <div class="setup-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 7v6c0 5.25 3.4 10.14 8 11.36C16.6 23.14 20 18.25 20 13V7L12 2z"/></svg>
+        NSS Digital Financial Safety
+      </div>
+      <h1>Fake UPI Payment<br>Awareness Simulation</h1>
+      <p>Demonstrate to merchants how realistic fake payment receipts look, and train them to verify every transaction.</p>
+    </div>
+
+    <div class="setup-content">
+      <div>
+        <label class="form-label" for="shopName">Merchant / Recipient Name</label>
+        <input type="text" id="shopName" class="form-input" value="Rati Ram Vishvakarma" placeholder="e.g. Rati Ram Vishvakarma" autocomplete="off" />
+      </div>
+
+      <div>
+        <label class="form-label" for="upiId">Receiver UPI ID</label>
+        <input type="text" id="upiId" class="form-input" value="paytm.s3yo9we@pty" placeholder="e.g. paytm.s3yo9we@pty" autocomplete="off" />
+      </div>
+
+      <div>
+        <label class="form-label" for="amount">Amount in ₹</label>
+        <div class="amount-input-box">
+          <span class="sym">₹</span>
+          <input type="number" id="amount" class="form-input" value="329" min="1" inputmode="decimal" />
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label" for="txnNote">Payment Message / Note (Optional)</label>
+        <input type="text" id="txnNote" class="form-input" value="Paying To Flipkart ORDER7195998466" placeholder="e.g. Paying For Groceries" autocomplete="off" />
+      </div>
+
+      <button class="start-btn safe-touch" onclick="startDemo()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+        </svg>
+        Simulate Payment
+      </button>
+
+      <button class="quick-history-btn safe-touch" onclick="goToHistory()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Open Transaction History
+      </button>
+
+      <div style="font-size:12px; color:#6b7280; text-align:center; line-height:1.5; margin-top:8px;">
+        💡 <strong>Live Demo Tip:</strong> Once on the receipt screen, tap the green <strong>"Transaction Successful"</strong> header to instantly trigger the <em>Fake Payment Awareness Reveal</em>.
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       SCREEN 2: PROCESSING (PhonePe Purple Loader)
+  ══════════════════════════════════════════════════════ -->
+  <section id="processing" class="screen">
+    <div class="proc-amount">Paying ₹<span id="procAmount">329</span></div>
+    <div class="proc-shop">to <strong id="procShop">Rati Ram Vishvakarma</strong></div>
+    <div class="proc-spinner"></div>
+    <div style="font-size:14px; opacity:0.8;">Connecting to UPI securely...</div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       SCREEN 3: REALISTIC TRANSACTION SUCCESSFUL
+       Grounded exactly in Screenshot 2
+  ══════════════════════════════════════════════════════ -->
+  <section id="receipt" class="screen">
+    <!-- Top Green Header Bar (Tapping triggers Fake Awareness Reveal) -->
+    <div class="receipt-header safe-touch" id="receiptHeader" onclick="toggleAwarenessReveal()">
+      <button class="receipt-back-btn" onclick="event.stopPropagation(); goToSetup()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+      <div class="receipt-header-titles">
+        <div class="receipt-header-title" id="receiptHeaderTitle">Transaction Successful</div>
+        <div class="receipt-header-sub" id="receiptTimestamp">06:49 am on 07 Nov 2026</div>
+      </div>
+      <!-- Subtle Educational Hint -->
+      <div style="opacity:0.75; font-size:11px; color:#fff;">Tap to Reveal</div>
+    </div>
+
+    <!-- Hidden High-Contrast Bilingual Awareness Card -->
+    <div class="receipt-awareness-banner" id="awarenessBanner">
+      <div class="rab-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
+        🚨 FAKE PAYMENT SCREEN — ₹0 SENT!
+      </div>
+      <div class="rab-desc">
+        Never hand over items just by looking at a customer's phone screen! Anyone can create or download a fake app screen.
+      </div>
+      <div class="rab-hindi">
+        (नकली पेमेंट स्क्रीन — ₹0 भेजे गए। ग्राहक के फोन पर भरोसा न करें, हमेशा अपने बैंक SMS या साउंडबॉक्स की आवाज सुनें।)
+      </div>
+    </div>
+
+    <div class="receipt-body">
+      <!-- "Paid to" Recipient Card -->
+      <div class="dark-card">
+        <div class="paid-to-label">Paid to</div>
+        <div class="recipient-row">
+          <div class="recipient-left">
+            <div class="recipient-avatar" id="receiptAvatar">RV</div>
+            <div class="recipient-meta">
+              <div class="recipient-name" id="receiptRecipientName">Rati Ram Vishvakarma</div>
+              <div class="recipient-upi" id="receiptRecipientUpi">paytm.s3yo9we@pty</div>
+            </div>
+          </div>
+          <div class="recipient-amount" id="receiptAmount">₹329</div>
+        </div>
+
+        <div class="card-divider"></div>
+
+        <!-- Collapsible Transfer Details -->
+        <div class="transfer-details-header safe-touch" onclick="toggleTransferDetails()">
+          <div class="td-header-left">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            <span>Transfer Details</span>
+          </div>
+          <div class="td-chevron" id="tdChevron">^</div>
+        </div>
+
+        <div class="transfer-details-content" id="transferDetailsBody">
+          <div>
+            <div class="td-row-label">Message</div>
+            <div class="td-row-val" id="receiptMessage">Paying To Flipkart ORDER7195998466</div>
+          </div>
+
+          <div>
+            <div class="td-row-label">PhonePe Transaction ID</div>
+            <div class="copyable-row">
+              <div class="td-row-val" id="receiptTxnId">T2611070649130237870809</div>
+              <button class="copy-icon-btn safe-touch" onclick="copyText('receiptTxnId')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div class="td-row-label">Debited from</div>
+            <div class="debited-row">
+              <div class="debited-left">
+                <div class="bank-badge">B</div>
+                <div class="bank-acc">XXXXXX7980</div>
+              </div>
+              <div class="debited-amount" id="receiptDebitedAmount">₹329</div>
+            </div>
+            <div class="utr-row">
+              <div class="utr-text">UTR: <span id="receiptUtr">644623754989</span></div>
+              <button class="copy-icon-btn safe-touch" onclick="copyText('receiptUtr')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action Row (Screenshot 2: View History, Split Expense, Share Receipt) -->
+      <div class="quick-actions-row">
+        <div class="action-col safe-touch" onclick="goToHistory()">
+          <div class="action-circle-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="action-label">View History</div>
+        </div>
+
+        <div class="action-col safe-touch" onclick="showToast('Simulation: Split Expense requested')">
+          <div class="action-circle-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"/><line x1="12" y1="12" x2="12" y2="15"/></svg>
+          </div>
+          <div class="action-label">Split Expense</div>
+        </div>
+
+        <div class="action-col safe-touch" onclick="shareSimulatedReceipt()">
+          <div class="action-circle-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </div>
+          <div class="action-label">Share Receipt</div>
+        </div>
+      </div>
+
+      <!-- Contact PhonePe Support Card -->
+      <div class="dark-card support-card safe-touch" onclick="showToast('PhonePe Help simulation')">
+        <div class="support-left">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span>Contact PhonePe Support</span>
+        </div>
+        <div style="color:var(--phonepe-subtext); font-size:16px;">&gt;</div>
+      </div>
+
+      <!-- Promo Card: "Pay securely with fingerp..." -->
+      <div class="dark-card promo-card">
+        <div class="promo-title">Pay securely with fingerp...</div>
+        <div class="promo-sub">Enjoy seamless and safer payments up to ₹10,000.</div>
+        <button class="promo-pill-btn safe-touch" onclick="showToast('Biometric payment simulated')">Activate Now</button>
+        <div class="promo-shield-wrap">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" fill="#38bdf8" opacity="0.3" stroke="#38bdf8" stroke-width="1.5"/>
+            <path d="M9 12l2 2 4-4" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       SCREEN 4: TRANSACTION HISTORY
+       Grounded exactly in Screenshot 1
+  ══════════════════════════════════════════════════════ -->
+  <section id="history" class="screen">
+    <!-- Top Violet Header Bar -->
+    <div class="history-header">
+      <div class="history-header-left">
+        <div class="user-avatar-badge">
+          🧑
+          <div class="flag-corner">🇮🇳</div>
+        </div>
+        <div class="location-info">
+          <div class="loc-title">
+            <span>Add Address</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+          </div>
+          <div class="loc-sub">Ambah Subdistrict</div>
+        </div>
+      </div>
+      <div class="history-header-icons">
+        <button class="h-icon-btn safe-touch" onclick="goToSetup()" title="Setup Demo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </button>
+        <button class="h-icon-btn safe-touch">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </button>
+        <button class="h-icon-btn safe-touch" onclick="showToast('Help & Education')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search Controls -->
+    <div class="history-controls">
+      <div class="search-bar-wrap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="historySearch" class="search-input" placeholder="Search by name, number or UPI ID" oninput="filterHistory()" />
+      </div>
+    </div>
+
+    <!-- Filter Pills Row (Screenshot 1: Month, Categories, Filters) -->
+    <div class="filter-pills-row">
+      <div class="filter-pill safe-touch" onclick="cycleMonthFilter()">
+        <span id="monthFilterLabel">Month</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+      </div>
+      <div class="filter-pill safe-touch" onclick="cycleCategoryFilter()">
+        <span id="categoryFilterLabel">Categories</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+      </div>
+      <div class="filter-pill safe-touch" onclick="resetDemoData()">
+        <span>Reset Data</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm-6 8c0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3c-3.31 0-6-2.69-6-6z"/></svg>
+      </div>
+    </div>
+
+    <!-- Transaction Feed -->
+    <div class="history-feed" id="historyFeed">
+      <!-- Injected via JavaScript -->
+    </div>
+
+    <!-- Floating Chevron Button (from Screenshot 1) -->
+    <div class="history-fab safe-touch" onclick="window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+
+    <!-- Bottom 5-Tab Navigation Bar -->
+    <div class="bottom-navbar">
+      <div class="nav-tab safe-touch" onclick="goToSetup()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        <span>Home</span>
+      </div>
+      <div class="nav-tab safe-touch" onclick="showToast('Stores tab simulation')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <span>Stores</span>
+      </div>
+      <div class="nav-tab safe-touch" onclick="showToast('Insurance tab simulation')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Insurance</span>
+      </div>
+      <div class="nav-tab safe-touch" onclick="showToast('Wealth tab simulation')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></svg>
+        <span>Wealth</span>
+      </div>
+      <div class="nav-tab active safe-touch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span>History</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   DEFAULT MOCK TRANSACTIONS (Faithful to Screenshot 1)
+═══════════════════════════════════════════════════════ */
+const INITIAL_TRANSACTIONS = [
+  {
+    id: 'T2311301540120192837461',
+    type: 'paid',
+    title: 'Paid to',
+    name: 'SAURAV BANSAL',
+    time: '36 secs ago',
+    amount: 2100,
+    statusText: 'Debited from',
+    bank: 'BOB',
+    acc: 'XXXXXX7980',
+    utr: '644623754989',
+    note: 'Payment to Saurav Bansal',
+    upi: 'saurav.bansal@oksbi',
+    badgeType: 'purple-send',
+    dateGroup: 'Nov 2026'
+  },
+  {
+    id: 'T2311301439120192837462',
+    type: 'received',
+    title: 'Received from',
+    name: 'Navneet',
+    time: '1 hour ago',
+    amount: 2500,
+    statusText: 'Credited to',
+    bank: 'BOB',
+    acc: 'XXXXXX7980',
+    utr: '533128941012',
+    note: 'Received via UPI',
+    upi: 'navneet89@ybl',
+    badgeType: 'purple-receive',
+    dateGroup: 'Nov 2026'
+  },
+  {
+    id: 'T2311301139120192837463',
+    type: 'paid',
+    title: 'Paid to',
+    name: 'SHWETA JAIN',
+    time: '30 Nov 2023',
+    amount: 5000,
+    statusText: 'Debited from',
+    bank: 'BOB',
+    acc: 'XXXXXX7980',
+    utr: '499120485612',
+    note: 'Payment to Shweta',
+    upi: 'shwetajain@icici',
+    badgeType: 'purple-send',
+    dateGroup: 'Nov 2023'
+  },
+  {
+    id: 'T2311301039120192837464',
+    type: 'received',
+    title: 'Received from',
+    name: 'Papa',
+    time: '30 Nov 2023',
+    amount: 2500,
+    statusText: 'Credited to',
+    bank: 'BOB',
+    acc: 'XXXXXX7980',
+    utr: '488102934112',
+    note: 'Family support',
+    upi: 'papa@okhdfcbank',
+    badgeType: 'diya',
+    dateGroup: 'Nov 2023'
+  },
+  {
+    id: 'T2311291039120192837465',
+    type: 'received',
+    title: 'Received from',
+    name: 'Papa',
+    time: '29 Nov 2023',
+    amount: 150,
+    statusText: 'Credited to',
+    bank: 'BOB',
+    acc: 'XXXXXX7980',
+    utr: '477192834190',
+    note: 'Pocket money',
+    upi: 'papa@okhdfcbank',
+    badgeType: 'diya',
+    dateGroup: 'Nov 2023'
+  },
+  {
+    id: 'T2311271039120192837466',
+    type: 'recharge',
+    title: 'Mobile recharged',
+    name: '9303773240',
+    time: '27 Nov 2023',
+    amount: 19,
+    statusText: 'Debited from',
+    bank: 'WALLET',
+    acc: 'PhonePe Wallet',
+    utr: '466182930192',
+    note: 'Jio 1GB Add-on Data',
+    upi: '9303773240@recharge',
+    badgeType: 'mobile',
+    dateGroup: 'Nov 2023'
+  },
+  {
+    id: 'T2311251039120192837467',
+    type: 'paid',
+    title: 'Paid to',
+    name: 'RADHE SWEETS',
+    time: '25 Nov 2023',
+    amount: 855,
+    statusText: 'Debited from',
+    bank: 'BOB',
+    acc: 'XXXXXX7980',
+    utr: '455192840192',
+    note: 'Sweets and snacks',
+    upi: 'radhesweets@paytm',
+    badgeType: 'purple-send',
+    dateGroup: 'Nov 2023'
+  }
+];
+
+/* ─── Application State ──────────────────────────────── */
+let transactions = [];
+let currentTxn = null;
+let isAwarenessRevealed = false;
+let activeCategoryFilter = 'All'; // All | Paid | Received | Recharge
+let activeMonthFilter = 'All'; // All | Nov 2026 | Nov 2023
+
+function loadTransactions() {
+  try {
+    const saved = localStorage.getItem('nss_phonepe_history');
+    if (saved) {
+      transactions = JSON.parse(saved);
+    } else {
+      transactions = [...INITIAL_TRANSACTIONS];
+      localStorage.setItem('nss_phonepe_history', JSON.stringify(transactions));
+    }
+  } catch (e) {
+    transactions = [...INITIAL_TRANSACTIONS];
+  }
+}
+
+function saveTransactions() {
+  try {
+    localStorage.setItem('nss_phonepe_history', JSON.stringify(transactions));
+  } catch (e) {}
+}
+
+function resetDemoData() {
+  if (confirm('Reset simulated transaction history to initial state?')) {
+    transactions = [...INITIAL_TRANSACTIONS];
+    saveTransactions();
+    filterHistory();
+    showToast('Transaction history reset');
+  }
+}
+
+/* ─── Audio & Haptics ────────────────────────────────── */
+let audioCtx = null;
+function ensureAudio() {
+  const el = document.getElementById('builtinChime');
+  if (el) {
+    el.currentTime = 0;
+    el.play().catch(() => {
+      // Fallback to Web Audio if audio element fails autoplay
+      playSynthesizedChime();
+    });
+  } else {
+    playSynthesizedChime();
+  }
+}
+
+function playSynthesizedChime() {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    const now = audioCtx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + i * 0.08);
+      gain.gain.setValueAtTime(0, now + i * 0.08);
+      gain.gain.linearRampToValueAtTime(0.3, now + i * 0.08 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.08 + 0.5);
+      osc.start(now + i * 0.08);
+      osc.stop(now + i * 0.08 + 0.55);
+    });
+  } catch (e) {}
+}
+
+/* ─── Screen Transitions ─────────────────────────────── */
+function showScreen(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function goToSetup() {
+  showScreen('setup');
+}
+
+function goToHistory() {
+  filterHistory();
+  showScreen('history');
+}
+
+/* ─── Realistic ID Generators ────────────────────────── */
+function generateTxnId() {
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const hh = String(now.getHours()).padStart(2, '0');
+  const min = String(now.getMinutes()).padStart(2, '0');
+  let rest = '';
+  for (let i = 0; i < 11; i++) {
+    rest += Math.floor(Math.random() * 10);
+  }
+  return `T${yy}${mm}${dd}${hh}${min}${rest}`;
+}
+
+function generateUTR() {
+  let utr = '';
+  for (let i = 0; i < 12; i++) {
+    utr += Math.floor(Math.random() * 10);
+  }
+  return utr;
+}
+
+function formatDateTimeForReceipt(d) {
+  const hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'pm' : 'am';
+  const hh = String(hours % 12 || 12).padStart(2, '0');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${hh}:${minutes} ${ampm} on ${String(d.getDate()).padStart(2, '0')} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function getInitials(name) {
+  if (!name) return '??';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/* ─── Payment Flow Simulation ────────────────────────── */
+function startDemo() {
+  const shopName = document.getElementById('shopName').value.trim() || 'Rati Ram Vishvakarma';
+  const upiId = document.getElementById('upiId').value.trim() || 'paytm.s3yo9we@pty';
+  const amount = parseFloat(document.getElementById('amount').value) || 329;
+  const note = document.getElementById('txnNote').value.trim() || 'Paying To Flipkart ORDER7195998466';
+
+  document.getElementById('procAmount').textContent = amount.toLocaleString('en-IN');
+  document.getElementById('procShop').textContent = shopName;
+
+  showScreen('processing');
+
+  setTimeout(() => {
+    const now = new Date();
+    const newTxn = {
+      id: generateTxnId(),
+      type: 'paid',
+      title: 'Paid to',
+      name: shopName,
+      time: 'Just now',
+      amount: amount,
+      statusText: 'Debited from',
+      bank: 'BOB',
+      acc: 'XXXXXX7980',
+      utr: generateUTR(),
+      note: note,
+      upi: upiId,
+      badgeType: 'purple-send',
+      dateGroup: 'Nov 2026',
+      timestamp: formatDateTimeForReceipt(now)
+    };
+
+    // Prepend to transaction list
+    transactions.unshift(newTxn);
+    saveTransactions();
+
+    openReceipt(newTxn, true);
+  }, 900);
+}
+
+function openReceipt(txn, playAudio = false) {
+  currentTxn = txn;
+  isAwarenessRevealed = false;
+
+  const header = document.getElementById('receiptHeader');
+  const title = document.getElementById('receiptHeaderTitle');
+  const banner = document.getElementById('awarenessBanner');
+
+  header.classList.remove('fake-mode');
+  title.textContent = 'Transaction Successful';
+  banner.classList.remove('active');
+
+  document.getElementById('receiptTimestamp').textContent = txn.timestamp || formatDateTimeForReceipt(new Date());
+  document.getElementById('receiptAvatar').textContent = getInitials(txn.name);
+  document.getElementById('receiptRecipientName').textContent = txn.name;
+  document.getElementById('receiptRecipientUpi').textContent = txn.upi;
+  document.getElementById('receiptAmount').textContent = `₹${txn.amount.toLocaleString('en-IN')}`;
+  document.getElementById('receiptDebitedAmount').textContent = `₹${txn.amount.toLocaleString('en-IN')}`;
+  document.getElementById('receiptMessage').textContent = txn.note;
+  document.getElementById('receiptTxnId').textContent = txn.id;
+  document.getElementById('receiptUtr').textContent = txn.utr;
+
+  showScreen('receipt');
+
+  if (playAudio) {
+    ensureAudio();
+    if (navigator.vibrate) navigator.vibrate([70, 40, 70]);
+  }
+}
+
+/* ─── Awareness Reveal Mode ──────────────────────────── */
+function toggleAwarenessReveal() {
+  isAwarenessRevealed = !isAwarenessRevealed;
+
+  const header = document.getElementById('receiptHeader');
+  const title = document.getElementById('receiptHeaderTitle');
+  const banner = document.getElementById('awarenessBanner');
+
+  if (isAwarenessRevealed) {
+    header.classList.add('fake-mode');
+    title.textContent = 'FAKE TRANSACTION DEMO!';
+    banner.classList.add('active');
+    if (navigator.vibrate) navigator.vibrate([120, 60, 180, 60, 240]);
+  } else {
+    header.classList.remove('fake-mode');
+    title.textContent = 'Transaction Successful';
+    banner.classList.remove('active');
+  }
+}
+
+function toggleTransferDetails() {
+  const body = document.getElementById('transferDetailsBody');
+  const chevron = document.getElementById('tdChevron');
+  if (body.classList.contains('hidden')) {
+    body.classList.remove('hidden');
+    chevron.classList.remove('collapsed');
+  } else {
+    body.classList.add('hidden');
+    chevron.classList.add('collapsed');
+  }
+}
+
+/* ─── Clipboard & Share ──────────────────────────────── */
+function copyText(elementId) {
+  const text = document.getElementById(elementId).innerText.trim();
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Copied to clipboard');
+  }).catch(() => {
+    showToast('Copied');
+  });
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('visible');
+  setTimeout(() => toast.classList.remove('visible'), 2000);
+}
+
+function shareSimulatedReceipt() {
+  if (!currentTxn) return;
+  const shareText = `[NSS Cyber Awareness Simulation Receipt]
+Paid ₹${currentTxn.amount} to ${currentTxn.name}
+UPI ID: ${currentTxn.upi}
+Txn ID: ${currentTxn.id}
+UTR: ${currentTxn.utr}
+
+⚠️ Caution: Never accept payment based on a customer's screenshot or phone screen. Verify in your bank app or listen for the Soundbox!`;
+  if (navigator.share) {
+    navigator.share({ title: 'Simulated Payment Receipt', text: shareText });
+  } else {
+    navigator.clipboard.writeText(shareText).then(() => {
+      showToast('Receipt details copied to clipboard');
+    });
+  }
+}
+
+/* ─── History Filtering & Rendering ──────────────────── */
+function filterHistory() {
+  const search = document.getElementById('historySearch').value.toLowerCase().trim();
+  const feed = document.getElementById('historyFeed');
+
+  const filtered = transactions.filter(t => {
+    // Category filter
+    if (activeCategoryFilter === 'Paid' && t.type !== 'paid') return false;
+    if (activeCategoryFilter === 'Received' && t.type !== 'received') return false;
+    if (activeCategoryFilter === 'Recharge' && t.type !== 'recharge') return false;
+
+    // Month filter
+    if (activeMonthFilter !== 'All' && t.dateGroup !== activeMonthFilter) return false;
+
+    // Search query
+    if (search) {
+      const matchName = t.name.toLowerCase().includes(search);
+      const matchUpi = t.upi && t.upi.toLowerCase().includes(search);
+      const matchAmt = String(t.amount).includes(search);
+      return matchName || matchUpi || matchAmt;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    feed.innerHTML = `
+      <div style="padding: 40px 20px; text-align: center; color: #9ca3af; font-size: 13.5px;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.8" style="margin-bottom:8px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <div>No transactions found matching your filters</div>
+      </div>
+    `;
+    return;
+  }
+
+  feed.innerHTML = filtered.map(t => {
+    let badgeHtml = '';
+    if (t.badgeType === 'purple-send') {
+      badgeHtml = `<div class="feed-badge purple-send">↗</div>`;
+    } else if (t.badgeType === 'purple-receive') {
+      badgeHtml = `<div class="feed-badge purple-receive">↙</div>`;
+    } else if (t.badgeType === 'mobile') {
+      badgeHtml = `<div class="feed-badge mobile">📱</div>`;
+    } else if (t.badgeType === 'diya') {
+      badgeHtml = `<div class="feed-badge avatar">🪔</div>`;
+    } else {
+      badgeHtml = `<div class="feed-badge purple-send">${getInitials(t.name)}</div>`;
+    }
+
+    return `
+      <div class="feed-item safe-touch" onclick="openHistoryItem('${t.id}')">
+        <div class="feed-left">
+          ${badgeHtml}
+          <div class="feed-text">
+            <div class="feed-action">${t.title}</div>
+            <div class="feed-name">${t.name}</div>
+            <div class="feed-time">${t.time}</div>
+          </div>
+        </div>
+        <div class="feed-right">
+          <div class="feed-amount">₹${t.amount.toLocaleString('en-IN')}</div>
+          <div class="feed-status-meta">
+            <span>${t.statusText}</span>
+            <span class="feed-bank-icon">BOB</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openHistoryItem(id) {
+  const item = transactions.find(t => t.id === id);
+  if (item) {
+    openReceipt(item, false);
+  }
+}
+
+function cycleMonthFilter() {
+  const months = ['All', 'Nov 2026', 'Nov 2023'];
+  const nextIdx = (months.indexOf(activeMonthFilter) + 1) % months.length;
+  activeMonthFilter = months[nextIdx];
+  document.getElementById('monthFilterLabel').textContent = activeMonthFilter === 'All' ? 'Month' : activeMonthFilter;
+  filterHistory();
+}
+
+function cycleCategoryFilter() {
+  const cats = ['All', 'Paid', 'Received', 'Recharge'];
+  const nextIdx = (cats.indexOf(activeCategoryFilter) + 1) % cats.length;
+  activeCategoryFilter = cats[nextIdx];
+  document.getElementById('categoryFilterLabel').textContent = activeCategoryFilter === 'All' ? 'Categories' : activeCategoryFilter;
+  filterHistory();
+}
+
+// Initialize
+loadTransactions();
+filterHistory();
+</script>
+</body>
+</html>
